@@ -1,0 +1,5 @@
+
+
+def translationUnitRule(name:str, src:str, out:str=None, hdrs:list=[], deps:list=[], flags:list=[], labels:list=[]):
+
+def linkRule(name:str, out:str, deps:list=[], flags:list=[], labels:list=[], sharedLib:bool=False):
