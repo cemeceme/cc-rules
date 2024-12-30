@@ -278,7 +278,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
       labels (list): Labels to attach to this rule.
     """
 
-
+    pkg_name = package_name()
     # Create labels.
     labels = (["cc:ld:" + flag for flag in linker_flags] +
               ["cc:pc:" + lib for lib in pkg_config_libs] +
