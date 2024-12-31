@@ -32,7 +32,9 @@ def _buildTUCommand(name:str):
         if(remaining.startswith("def:")):
             defines += [remaining[4:]]
 
-    
+    # log.info("Includes for " + name + ": " + str(includes))
+    # log.info("defines for " + name + ": " + str(defines))
+
     # Set up command.
     cmd = ["\"$TOOLS_CC\"", "-c", "-o", "\"$OUT\""] # Gcc in compile only mode. TODO is "-s" needed?
 
@@ -91,7 +93,7 @@ def _generateTURule(name:str, src:str, out:str=None, hdrs:list=[], deps:list=[],
         binary=False,
         needs_transitive_deps=True,
         requires=["cc_hdrs", "test"],
-        # labels=labels,
+        labels=labels,
         tools=tools
     )
     return(srcRule)
@@ -168,7 +170,7 @@ def _getBuildLinkCommand(sharedLib:bool):
 
     return(_buildLinkCommand)
 
-def _generateArchiveRule(name: str, out:str, srcs:list=[],pre_build:function = None):
+def _generateArchiveRule(name: str, out:str, srcs:list=[], deps=deps, pre_build:function = None):
     """
     Generates an archive step for archiving multiple object or archive files into one file.
     """
@@ -185,6 +187,7 @@ def _generateArchiveRule(name: str, out:str, srcs:list=[],pre_build:function = N
         cmd="\"$TOOLS_AR\" rcs \"$OUT\" `find . -name \"*.o\" | sort`",
         building_description='Archiving...',
         binary=False,
+        deps=deps,
         pre_build=pre_build,
         tools = tools
     )
@@ -201,7 +204,7 @@ def _generateLinkRule(name:str, out:str, deps:list=[], flags:list=[], labels:lis
     }
 
     labels += ["cc:ld:" + flag for flag in flags]
-    log.info("Linker flags given: " + str(["cc:ld:" + flag for flag in flags]))
+    # log.info("Linker flags given: " + str(["cc:ld:" + flag for flag in flags]))
     requires = ["cc", "test"]
 
     linkRule = build_rule(
@@ -221,7 +224,7 @@ def _generateLinkRule(name:str, out:str, deps:list=[], flags:list=[], labels:lis
     )
     return(linkRule)
 
-def _getExpandSrcsPreBuild(name:str, srcs:list=[], hdrs:list=[], deps:list=[], flags:list=[]):
+def _getExpandSrcsPreBuild(name:str, srcs:list=[], hdrs:list=[], deps:list=[], flags:list=[], labels:list=[]):
     def _ExpandSrcsPreBuild(callerName:str):
     """
     Expands build label sources in a pre build and adds them as the dependency to this rule.
@@ -232,7 +235,7 @@ def _getExpandSrcsPreBuild(name:str, srcs:list=[], hdrs:list=[], deps:list=[], f
 
             for src in get_outs(label):
                 # Generate build rule for each source.
-                srcRule = _generateTURule(name=name, src=src, hdrs=hdrs, deps=deps, flags=flags)
+                srcRule = _generateTURule(name=name, src=src, hdrs=hdrs, deps=deps, flags=flags, labels=labels)
 
                 add_dep(callerName, srcRule)
     return(_ExpandSrcsPreBuild)
@@ -318,7 +321,8 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         name=tag(name,"a"),
         out=out,
         srcs=srcRules,
-        pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags)
+        deps=buildLabelSrcRules, # Make sure that label sources get built before the pre-build step.
+        pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags, labels=labels)
     )
     
     provides = {

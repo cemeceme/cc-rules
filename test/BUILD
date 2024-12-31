@@ -13,8 +13,9 @@ export_file(
 
 cc_library(
     name = "TestLib",
-    srcs=["libSource.cpp"] + [":GenSrc"],
-    hdrs=["libHeader.h"] + [":GenHdr"],
+    srcs=["libSource.cpp", "testFolder/folderSource.cpp", ":GenSrc"],
+    hdrs=["libHeader.h", "testFolder/folderHeader.h", ":GenHdr"],
+    includes=["testFolder"],
     defines=["TEST_DEFINE"]
 )
 
