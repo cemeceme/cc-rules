@@ -38,7 +38,7 @@ def _buildTUCommand(name:str):
 
     cmd += ["-I."] # Include paths.
     for include in includes:
-        cmd += ["-I" + Include]
+        cmd += ["-I" + include]
 
     # Defines.
     for define in defines:
@@ -314,7 +314,12 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     if not out:
         out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
 
-    archiveRule = _generateArchiveRule(name=tag(name,"a"), out=out, srcs=srcRules, pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags))
+    archiveRule = _generateArchiveRule(
+        name=tag(name,"a"),
+        out=out,
+        srcs=srcRules,
+        pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags)
+    )
     
     provides = {
         "cc": archiveRule,
