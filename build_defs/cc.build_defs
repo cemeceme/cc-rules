@@ -233,6 +233,9 @@ def _getExpandSrcsPreBuild(name:str, srcs:list=[], hdrs:list=[], deps:list=[], f
             if(not looks_like_build_label(label)):
                 log.fatal("Given source: '" + label + "' is a file. Must be a build label.")
 
+            # Make sure to use the canonical label, as otherwise rules are sometimes not found.
+            label = canonicalise(label)
+
             for src in get_outs(label):
                 # Generate build rule for each source.
                 srcRule = _generateTURule(name=name, src=src, hdrs=hdrs, deps=deps, flags=flags, labels=labels)
