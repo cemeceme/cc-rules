@@ -16,6 +16,7 @@ cc_library(
     srcs=["libSource.cpp", "testFolder/folderSource.cpp", ":GenSrc"],
     hdrs=["libHeader.h", "testFolder/folderHeader.h", ":GenHdr"],
     includes=["testFolder"],
+    deps=["//test/lib2:TestLib2"],
     defines=["TEST_DEFINE"]
 )
 

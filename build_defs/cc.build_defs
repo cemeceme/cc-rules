@@ -32,9 +32,6 @@ def _buildTUCommand(name:str):
         if(remaining.startswith("def:")):
             defines += [remaining[4:]]
 
-    # log.info("Includes for " + name + ": " + str(includes))
-    # log.info("defines for " + name + ": " + str(defines))
-
     # Set up command.
     cmd = ["\"$TOOLS_CC\"", "-c", "-o", "\"$OUT\""] # Gcc in compile only mode. TODO is "-s" needed?
 
@@ -61,11 +58,11 @@ def _buildTUCommand(name:str):
     set_command(name, "opt", " ".join(cmd))
 
 
-def _generateTURule(name:str, src:str, out:str=None, hdrs:list=[], deps:list=[], flags:list=[], labels:list=[]):
+def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags:list, labels:list):
     """
     Generates a translation unit for the given source.
     """
-    if(looks_like_build_label(src)):
+    if(looks_like_build_label(src) and src.count("+") == 0): # Only allow single file labels or literal files.
         log.fatal("Given source: '" + src + "' is a build label. Must be a file.")
 
     suffix = src.replace('/', '_').replace('.', '_').replace(':', '_').replace('|', '_')
@@ -86,7 +83,6 @@ def _generateTURule(name:str, src:str, out:str=None, hdrs:list=[], deps:list=[],
         optional_outs=['*.gcno'],
         deps=deps,
         srcs={'srcs': [src], 'hdrs': hdrs},
-        # cmd=" ".join(cmd),
         cmd="",
         pre_build=_buildTUCommand,
         building_description='Compiling... ',
@@ -115,6 +111,8 @@ def _getBuildLinkCommand(sharedLib:bool):
 
 
         labels = get_labels(name, "")
+
+        log.info("Labels in link: " + str(labels))
 
         includes = []
         libraries = []
@@ -164,13 +162,13 @@ def _getBuildLinkCommand(sharedLib:bool):
         if(len(flags) > 0):
             cmd += [",".join(["-Wl"] + flags)]
 
-        cmd += ["-lpthread", "-O3", "-fmax-errors=5"] # Optimisations, thread support and max errors.
+        cmd += ["-lpthread", "-O3", "-fmax-errors=5"] # Optimizations, thread support and max errors.
 
         set_command(name, "opt", " ".join(cmd))
 
     return(_buildLinkCommand)
 
-def _generateArchiveRule(name: str, out:str, srcs:list=[], deps=deps, pre_build:function = None):
+def _generateArchiveRule(name: str, out:str, srcs:list, deps:list):
     """
     Generates an archive step for archiving multiple object or archive files into one file.
     """
@@ -180,31 +178,33 @@ def _generateArchiveRule(name: str, out:str, srcs:list=[], deps=deps, pre_build:
         "ar": ["ar"],
     }
 
+    # requires = ["cc", "test"]
+
     archiveRule = build_rule(
         name=name,
         outs=[out],
         srcs=srcs,
         cmd="\"$TOOLS_AR\" rcs \"$OUT\" `find . -name \"*.o\" | sort`",
         building_description='Archiving...',
-        binary=False,
+        binary=True,
+        # requires=requires,
         deps=deps,
-        pre_build=pre_build,
-        tools = tools
+        tools = tools,
+        output_is_complete=False
     )
 
     return(archiveRule)
 
-def _generateLinkRule(name:str, out:str, deps:list=[], flags:list=[], labels:list=[], sharedLib:bool=False):
+def _generateLinkRule(name:str, out:str, deps:list, flags:list, labels:list, sharedLib:bool):
     """
     Generates a link step for dependencies.
     """
     # Tool definitions.
     tools = {
-        'cc': ["g++"]
+        "cc": ["g++"]
     }
 
     labels += ["cc:ld:" + flag for flag in flags]
-    # log.info("Linker flags given: " + str(["cc:ld:" + flag for flag in flags]))
     requires = ["cc", "test"]
 
     linkRule = build_rule(
@@ -212,19 +212,19 @@ def _generateLinkRule(name:str, out:str, deps:list=[], flags:list=[], labels:lis
         outs=[out],
         optional_outs=['*.gcno'],
         deps=deps,
-        # cmd=" ".join(cmd),
         cmd="",
         pre_build=_getBuildLinkCommand(sharedLib=sharedLib),
         building_description='Linking... ',
         binary=True,
-        # needs_transitive_deps=True,
+        needs_transitive_deps=True,
+        output_is_complete=True,
         requires=requires,
         labels=labels,
         tools=tools,
     )
     return(linkRule)
 
-def _getExpandSrcsPreBuild(name:str, srcs:list=[], hdrs:list=[], deps:list=[], flags:list=[], labels:list=[]):
+def _getExpandSrcsPreBuild(name:str, srcs:list, hdrs:list, deps:list, flags:list, labels:list):
     def _ExpandSrcsPreBuild(callerName:str):
     """
     Expands build label sources in a pre build and adds them as the dependency to this rule.
@@ -236,13 +236,14 @@ def _getExpandSrcsPreBuild(name:str, srcs:list=[], hdrs:list=[], deps:list=[], f
             # Make sure to use the canonical label, as otherwise rules are sometimes not found.
             label = canonicalise(label)
 
+            # Generate build rule for each source.
             for src in get_outs(label):
-                # Generate build rule for each source.
-                srcRule = _generateTURule(name=name, src=src, hdrs=hdrs, deps=deps, flags=flags, labels=labels)
-
-                add_dep(callerName, srcRule)
+                # Format source into a single file label.
+                srcLabel = label + "+" + src
+                # Generate rule and add as dependency.
+                srcRule = _generateTURule(name=name, src=srcLabel, hdrs=hdrs, deps=deps, flags=flags, labels=labels)
+                add_dep(callerName, srcRule, True)
     return(_ExpandSrcsPreBuild)
-
 
 
 def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:list=[], out:str='', optional_outs:list=[],
@@ -284,6 +285,13 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
       labels (list): Labels to attach to this rule.
     """
 
+    if alwayslink:
+        log.fatal("alwayslink not yet implemented.")
+
+    # Handle defines being passed as a dict, as a nicety for the user.
+    if isinstance(defines, dict):
+        defines = [k if v is None else f'{k}=\\"{v}\\"' for k, v in sorted(defines.items())]
+
     pkg_name = package_name()
     # Create labels.
     labels = (["cc:ld:" + flag for flag in linker_flags] +
@@ -313,35 +321,48 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         test_only=test_only,
         labels=labels,
         requires = ["cc_hdrs", "cc_mod"],
-        output_is_complete = False,
+        output_is_complete = False
     )
 
     # Define out name if not defined.
     if not out:
         out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
 
+    # Generate a rule for all sources, so that they can be expanded at build time and passed into the input of the archive rule.
+    sourceRule = filegroup(
+        name=tag(name,"srcs"),
+        srcs=srcRules,
+        pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags, labels=labels)
+    )
+
     archiveRule = _generateArchiveRule(
         name=tag(name,"a"),
         out=out,
-        srcs=srcRules,
-        deps=buildLabelSrcRules, # Make sure that label sources get built before the pre-build step.
-        pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags, labels=labels)
+        srcs=[],
+        deps=[sourceRule]
+    )
+
+    # seperaae archive filegroup to attach dependencies.
+    archiveFilegroup = filegroup(
+        name=tag(name,"as"),
+        srcs=[archiveRule],
+        deps=deps
     )
     
     provides = {
-        "cc": archiveRule,
+        "cc": archiveFilegroup,
         "cc_hdrs": headerRule
     }
 
     # Generate a wrapper rule, to pass in arguments.
     libRule = filegroup(
         name=name,
-        srcs=[archiveRule],
+        srcs=[archiveFilegroup],
+        deps=[headerRule]+deps,
         provides=provides,
         labels=labels,
         test_only=test_only,
-        visibility=visibility,
-        output_is_complete=True
+        visibility=visibility
     )
     return(libRule)
 
@@ -428,7 +449,7 @@ def cc_static_library(name:str, srcs:list=[], hdrs:list=[], compiler_flags:list&
 
 def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_outs:list=[], compiler_flags:list&cflags&copts=[],
                      linker_flags:list&ldflags&linkopts=[], deps:list=[], visibility:list=None, test_only:bool&testonly=False,
-                     pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], _c=False, labels:list=[]):
+                     pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[], defines:list|dict=[], _c=False, labels:list=[]):
     """Generates a C++ shared object (.so) with its dependencies linked in.
 
     Args:
@@ -446,6 +467,9 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
       pkg_config_libs (list): Libraries to declare a dependency on using `pkg-config --libs`
       pkg_config_cflags (list): Libraries to declare a dependency on using `pkg-config --cflags`
       includes (list): Include directories to be added to the compiler's lookup path.
+      defines (list | dict): List of tokens to define in the preprocessor.
+                             Alternatively can be a dict of name -> value to define, in which case
+                             values are surrounded by quotes.
       labels (list): Labels to attach to this rule.
     """
 
@@ -462,7 +486,10 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
             test_only = test_only,
             pkg_config_libs = pkg_config_libs,
             pkg_config_cflags = pkg_config_cflags,
-            includes = includes
+            includes = includes,
+            defines=defines,
+            labels=labels,
+            _c=_c
         )
         deps += [libRule]
         provides["cc_hdrs"] = ":" + tag(tag(name, "lib"), "hdrs")
@@ -484,7 +511,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
         name=name,
         srcs=[linkRule],
         test_only=test_only,
-        deps=deps,
+        # deps=deps,
         visibility=visibility,
         requires=['cc', 'cc_hdrs'],
         provides=provides,
@@ -568,8 +595,6 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
       optional_outs (list): Name of optional outputs.
     """
 
-    # $TOOLS_CC" -o "$OUT" -Wl,--start-group `find . -name "*.o" -or -name "*.a" | sort` -Wl,--end-group -Wl,-L.,-lnodeGraph -Wl,-LnodeGraphRenderers/qtWidgetRenderer,-lqtWidgetRenderer -Wl,-lmysql-connector-cpp -Wl,-rpath,'$ORIGIN/subrepos/nodeGraph' -Wl,-rpath,'$ORIGIN/subrepos/nodeGraph/nodeGraphRenderers/qtWidgetRenderer' -Wl,-rpath,'$ORIGIN/subrepos/mysql-connector-cpp' -Wl,-lpthread,-ldl -Wl,--build-id=none -std=c++20 -Werror -Werror=suggest-override -Werror=return-type -Werror=non-virtual-dtor -Werror=catch-value -Wno-unused-variable -Wno-reorder -Wno-sign-compare -Wno-stringop-overflow -lpthread -s -O3 -fmax-errors=5  -Wl,-lpthread,-ldl -Wl,/usr/lib64/libQt6Charts.so -Wl,/usr/lib64/libQt6Core.so -Wl,/usr/lib64/libQt6Gui.so -Wl,/usr/lib64/libQt6Widgets.so
-
     # Compile any headers or sources into a library first.
     if(srcs or hdrs):
         libRule = cc_library(
@@ -583,12 +608,15 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
             test_only = test_only,
             pkg_config_libs = pkg_config_libs,
             pkg_config_cflags = pkg_config_cflags,
-            includes = includes
+            includes = includes,
+            defines=defines,
+            labels=labels,
+            _c=_c
         )
         deps += [libRule]
 
-    linkRule = _generateLinkRule(name=tag(name, "bin"), out=name, deps=deps, flags=linker_flags, sharedLib=False)
-    
+    linkRule = _generateLinkRule(name=tag(name, "bin"), out=name, deps=deps, flags=linker_flags, labels=labels, sharedLib=False)
+
     fileRule = filegroup(
         name=name,
         srcs=[linkRule],
