@@ -1,5 +1,194 @@
 
 
-def translationUnitRule(name:str, src:str, out:str=None, hdrs:list=[], deps:list=[], flags:list=[], labels:list=[]):
+def _buildTUCommand(name:str):
+    """
+    Generates the command for a translation unit as a pre-build call.
+    """
+    labels = get_labels(name, "")
 
-def linkRule(name:str, out:str, deps:list=[], flags:list=[], labels:list=[], sharedLib:bool=False):
+    defines = []
+    includes = []
+    for label in labels:
+        if(not label.startswith("cc:")):
+            continue # Skip labels not meant for cc rules.
+
+        # Strip prefix.
+        remaining = label[3:]
+
+        # Add label to corresponding list.
+        if(remaining.startswith("inc:")):
+            includes += [remaining[4:]]
+
+        if(remaining.startswith("def:")):
+            defines += [remaining[4:]]
+
+    # Set up command.
+    cmd = ["\"$TOOLS_CC\"", "-c", "-o", "\"$OUT\""] # Gcc in compile only mode. TODO is "-s" needed?
+
+    cmd += ["-I."] # Include paths.
+    for include in includes:
+        cmd += ["-I" + include]
+
+    # Defines.
+    for define in defines:
+        cmd += ["-D" + define]
+
+    cmd += ["${SRCS_SRCS}"] # Source files.
+    cmd += ["-std=c++20"] # C++ standard to use.
+
+    # Error flags.
+    cmd += [
+        "-Werror", "-Werror=suggest-override", "-Werror=return-type", "-Werror=non-virtual-dtor", "-Werror=catch-value", "-Wno-unused-variable", 
+        "-Wno-reorder", "-Wno-sign-compare", "-Wno-stringop-overflow"
+    ]
+    cmd += ["-lpthread", "-O3", "-fmax-errors=5"] # Optimisations, thread support and max errors.
+    cmd += ["-fPIC"] # Position independent code.
+    # cmd += ["-isystem", "."] # System Include paths.
+
+    set_command(name, "opt", " ".join(cmd))
+
+def _getBuildLinkCommand(sharedLib:bool):
+    def _buildLinkCommand(name:str):
+        """
+        Generates the command for a link step as a pre-build call.
+        """
+
+        # Binary
+        # $TOOLS_CC" -o "$OUT" -Wl,--start-group `find . -name "*.o" -or -name "*.a" | sort` -Wl,--end-group 
+        # -Wl,-L.,-lnodeGraph -Wl,-LnodeGraphRenderers/qtWidgetRenderer,-lqtWidgetRenderer -Wl,-lmysql-connector-cpp -Wl,-rpath,'$ORIGIN/subrepos/nodeGraph' -Wl,-rpath,'$ORIGIN/subrepos/nodeGraph/nodeGraphRenderers/qtWidgetRenderer' -Wl,-rpath,'$ORIGIN/subrepos/mysql-connector-cpp' -Wl,-lpthread,-ldl -Wl,--build-id=none -std=c++20 -Werror -Werror=suggest-override -Werror=return-type -Werror=non-virtual-dtor -Werror=catch-value -Wno-unused-variable -Wno-reorder -Wno-sign-compare -Wno-stringop-overflow -lpthread -s -O3 -fmax-errors=5  -Wl,-lpthread,-ldl 
+        # -Wl,/usr/lib64/libQt6Charts.so -Wl,/usr/lib64/libQt6Core.so -Wl,/usr/lib64/libQt6Gui.so -Wl,/usr/lib64/libQt6Widgets.so
+
+        # Shared object.
+        # "$TOOLS_CC" -o "$OUT" -shared -Wl,--whole-archive -Wl,--start-group `find . -name "*.o" -or -name "*.a" | sort` -Wl,--end-group -Wl,--no-whole-archive 
+        # -Wl,-lpthread,-ldl -Wl,--build-id=none -std=c++20 -Werror -Werror=suggest-override -Werror=return-type -Werror=non-virtual-dtor -Werror=catch-value -Wno-unused-variable -Wno-reorder -Wno-sign-compare -Wno-stringop-overflow -lpthread -s -O3 -fmax-errors=5  -Wl,-lpthread,-ldl
+
+
+        labels = get_labels(name, "")
+
+        log.info("Labels in link: " + str(labels))
+
+        includes = []
+        libraries = []
+        flags = []
+        for label in labels:
+            if(not label.startswith("cc:")):
+                continue # Skip labels not meant for cc rules.
+
+            # Strip prefix.
+            remaining = label[3:]
+
+            # Add label to corresponding list.
+            if(remaining.startswith("inc:")):
+                includes += [remaining[4:]]
+            
+            if(remaining.startswith("lib:")):
+                libraries += [remaining[4:]]
+            
+            if(remaining.startswith("ld:")):
+                flags += [remaining[3:].replace(" ", ",")]
+
+        cmd = ["$TOOLS_CC", "-o", "\"$OUT\""]
+        if(sharedLib):
+            cmd += ["-shared", "-Wl,--whole-archive"]
+        cmd += ["-Wl,--start-group", "`find . -name \"*.o\" -or -name \"*.a\" | sort`", "-Wl,--end-group"]
+        if(sharedLib):
+            cmd += ["-Wl,--no-whole-archive"]
+
+
+        # Add library paths.
+        includeCmd = []
+        for library in libraries:
+            directory, fileName = split_path(library)
+            includeCmd += ["-L" + directory, "-l" + fileName]
+
+        if(len(includeCmd) > 0):
+            cmd += [",".join(["-Wl"]+ includeCmd)] # Include paths.
+
+        # cmd += ["-std=c++20"] # C++ standard to use.
+        cmd += ["-Wl,--build-id=none"] # Disable build ID.
+
+        # Error flags.
+        # cmd += [
+        #     "-Werror", "-Werror=suggest-override", "-Werror=return-type", "-Werror=non-virtual-dtor", "-Werror=catch-value", "-Wno-unused-variable", 
+        #     "-Wno-reorder", "-Wno-sign-compare", "-Wno-stringop-overflow"
+        # ]
+        if(len(flags) > 0):
+            cmd += [",".join(["-Wl"] + flags)]
+
+        cmd += ["-lpthread", "-O3", "-fmax-errors=5"] # Optimizations, thread support and max errors.
+
+        set_command(name, "opt", " ".join(cmd))
+
+    return(_buildLinkCommand)
+
+def translationUnit(name:str, src:str, out:str=None, hdrs:list=[], deps:list=[], labels:list=[]):
+
+    # Tool definitions.
+    tools = {
+        "cc": ["g++"],
+    }
+
+    srcRule = build_rule(
+        name=name,
+        outs=[out],
+        optional_outs=['*.gcno'],
+        deps=deps,
+        srcs={'srcs': [src], 'hdrs': hdrs},
+        cmd="",
+        pre_build=_buildTUCommand,
+        building_description='Compiling... ',
+        binary=False,
+        needs_transitive_deps=True,
+        requires=["cc_hdrs", "test"],
+        labels=labels,
+        tools=tools
+    )
+    return(srcRule)
+
+def link(name:str, out:str, deps:list=[], sharedLib:bool, labels:list=[]):
+    pass
+
+    # Tool definitions.
+    tools = {
+        "cc": ["g++"]
+    }
+
+    requires = ["cc", "test"]
+
+    linkRule = build_rule(
+        name=name,
+        outs=[out],
+        optional_outs=['*.gcno'],
+        deps=deps,
+        cmd="",
+        pre_build=_getBuildLinkCommand(sharedLib=sharedLib),
+        building_description='Linking... ',
+        binary=True,
+        needs_transitive_deps=True,
+        output_is_complete=True,
+        requires=requires,
+        labels=labels,
+        tools=tools,
+    )
+    return(linkRule)
+
+def archive(name: str, out:str, srcs:list, deps:list):
+
+    # Tool definitions.
+    tools = {
+        "ar": ["ar"],
+    }
+
+    archiveRule = build_rule(
+        name=name,
+        outs=[out],
+        srcs=srcs,
+        cmd="\"$TOOLS_AR\" rcs \"$OUT\" `find . -name \"*.o\" | sort`",
+        building_description='Archiving...',
+        binary=True,
+        deps=deps,
+        tools = tools,
+        output_is_complete=False
+    )
+
+    return(archiveRule)

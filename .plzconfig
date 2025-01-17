@@ -4,3 +4,10 @@ version = >=17.12.7-depHandling
 
 [PluginDefinition]
 name = cc
+
+
+[PluginConfig "default_compiler"]
+ConfigKey = CompilerTool
+DefaultValue = //cc-rules:gcc
+Inherit = true
+Help = The default compiler rule provider to use.
