@@ -26,7 +26,7 @@ def compilerPlugin(name:str, include:str, compiler:str, archiver:str, linker:str
 
     return build_rule(
         name=name,
-        outs=[name + ".build_defs"],
+        outs=[name + ".compiler_plugin"],
         cmd='text_file',
         _file_content="\n".join(lines).replace("\t", "    "),
         visibility=visibility
