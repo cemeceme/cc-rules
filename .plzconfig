@@ -5,9 +5,19 @@ version = >=17.12.7-depHandling
 [PluginDefinition]
 name = cc
 
+[Plugin "gcc"]
+Target = //plugins:gcc
+
 
 [PluginConfig "default_compiler"]
 ConfigKey = CompilerTool
-DefaultValue = "///cc//build_defs:gcc"
-Inherit = true
+Inherit = false
+Optional = false
+DefaultValue = "///gcc//build_defs:gcc"
 Help = The default compiler provider to use.
+
+
+
+
+;[Plugin "cc"]
+;CompilerTool = ///gcc//build_defs:gcc

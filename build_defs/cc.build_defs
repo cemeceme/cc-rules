@@ -10,8 +10,6 @@ you can write a cc_library rule specifying e.g. linker_flags = ['-lz'] and not h
 that on every single cc_binary / cc_test that transitively depends on that library.
 """
 
-# subinclude("///cc//build_defs:gcc")
-
 def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags:list, labels:list, compiler:function):
     """
     Generates a translation unit for the given source with the given compiler function.
@@ -253,7 +251,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
 
     TURule = _generateTURule(name=name, src=src, out=out, hdrs=hdrs + private_hdrs, deps=deps, flags=compiler_flags)
 
-    # Seperate file rule to package the object rule with passed in flags.
+    # Separate file rule to package the object rule with passed in flags.
     fileRule = filegroup(
         name=name,
         srcs=[TURule],
