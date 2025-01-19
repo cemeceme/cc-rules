@@ -145,6 +145,27 @@ def translationUnit(name:str, src:str, out:str=None, hdrs:list=[], deps:list=[],
     )
     return(srcRule)
 
+def archive(name: str, out:str, srcs:list, deps:list):
+
+    # Tool definitions.
+    tools = {
+        "ar": ["ar"],
+    }
+
+    archiveRule = build_rule(
+        name=name,
+        outs=[out],
+        srcs=srcs,
+        cmd="\"$TOOLS_AR\" rcs \"$OUT\" `find . -name \"*.o\" | sort`",
+        building_description='Archiving...',
+        binary=True,
+        deps=deps,
+        tools = tools,
+        output_is_complete=False
+    )
+
+    return(archiveRule)
+
 def link(name:str, out:str, deps:list=[], sharedLib:bool, labels:list=[]):
     pass
 
@@ -171,24 +192,3 @@ def link(name:str, out:str, deps:list=[], sharedLib:bool, labels:list=[]):
         tools=tools,
     )
     return(linkRule)
-
-def archive(name: str, out:str, srcs:list, deps:list):
-
-    # Tool definitions.
-    tools = {
-        "ar": ["ar"],
-    }
-
-    archiveRule = build_rule(
-        name=name,
-        outs=[out],
-        srcs=srcs,
-        cmd="\"$TOOLS_AR\" rcs \"$OUT\" `find . -name \"*.o\" | sort`",
-        building_description='Archiving...',
-        binary=True,
-        deps=deps,
-        tools = tools,
-        output_is_complete=False
-    )
-
-    return(archiveRule)

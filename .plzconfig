@@ -8,6 +8,6 @@ name = cc
 
 [PluginConfig "default_compiler"]
 ConfigKey = CompilerTool
-DefaultValue = //cc-rules:gcc
+DefaultValue = "///cc//build_defs:gcc"
 Inherit = true
-Help = The default compiler rule provider to use.
+Help = The default compiler provider to use.

@@ -1,0 +1,33 @@
+
+def compilerPlugin(name:str, include:str, compiler:str, archiver:str, linker:str, visibility:list=["PUBLIC"]):
+    """
+    Defines a compiler to be used in c/cc rules.
+    Args:
+      name (str): The name to give to the compiler plugin.
+      include (str): The subinclude path to where the following functions are defined.
+      compiler (str): The name of the compile function.
+      archiver (str): The name of the archive function.
+      linker (str): The name of the link function.
+      visibility (list): The visibility for this plugin.
+    """
+
+    # Generate a subincludable file from the given definitions.
+    lines = [
+        "subinclude(\"" + include + "\")",
+        "def getCompiler() -> function:",
+        "\treturn(" + compiler + ")",
+
+        "def getArchiver() -> function:",
+        "\treturn(" + archiver + ")",
+
+        "def getLinker() -> function:",
+        "\treturn(" + linker + ")",
+    ]
+
+    return build_rule(
+        name=name,
+        outs=[name + ".build_defs"],
+        cmd='text_file',
+        _file_content="\n".join(lines).replace("\t", "    "),
+        visibility=visibility
+    )

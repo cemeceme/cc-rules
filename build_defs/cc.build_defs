@@ -10,7 +10,7 @@ you can write a cc_library rule specifying e.g. linker_flags = ['-lz'] and not h
 that on every single cc_binary / cc_test that transitively depends on that library.
 """
 
-subinclude("///cc//build_defs:gcc")
+# subinclude("///cc//build_defs:gcc")
 
 def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags:list, labels:list, compiler:function):
     """
@@ -127,9 +127,9 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
       labels (list): Labels to attach to this rule.
     """
 
-    # compiler = CONFIG.CC.DEFAULT_COMPILER
-    compiler = translationUnit
-    archiver = archive
+    subinclude(CONFIG.CC.DEFAULT_COMPILER)
+    compiler = getCompiler()
+    archiver = getArchiver()
 
     if alwayslink:
         log.fatal("alwayslink not yet implemented.")
@@ -320,7 +320,8 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
       labels (list): Labels to attach to this rule.
     """
 
-    linker = link
+    subinclude(CONFIG.CC.DEFAULT_COMPILER)
+    linker = getLinker()
 
     provides = {"cc": ":" + name}
     if(srcs or hdrs):
@@ -444,7 +445,8 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
       optional_outs (list): Name of optional outputs.
     """
 
-    linker = link
+    subinclude(CONFIG.CC.DEFAULT_COMPILER)
+    linker = getLinker()
 
     # Compile any headers or sources into a library first.
     if(srcs or hdrs):
