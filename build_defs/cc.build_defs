@@ -23,6 +23,9 @@ def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags
 
     ruleName = tag(name, suffix)
 
+    # Add compiler flags to label.
+    labels += ["cc:cf:" + flag for flag in flags]
+
     compileRule = compiler(
         name=ruleName,
         src=src,
