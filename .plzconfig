@@ -8,14 +8,19 @@ name = cc
 [Plugin "gcc"]
 Target = //plugins:gcc
 
-[PluginConfig "default_compiler"]
-ConfigKey = DefaultCompilerTool
+[PluginConfig "default_cpp_compiler"]
+ConfigKey = DefaultCPPCompilerTool
+Inherit = false
+Optional = false
+;DefaultValue = ///gcc//build_defs:gpp
+Help = The default compiler provider to use for c++.
+
+[PluginConfig "default_c_compiler"]
+ConfigKey = DefaultCCompilerTool
 Inherit = false
 Optional = false
 ;DefaultValue = ///gcc//build_defs:gcc
-Help = The default compiler provider to use.
-
-
+Help = The default compiler provider to use for c.
 
 ;[Plugin "cc"]
 ;DefaultCompilerTool = ///gcc//build_defs:gcc

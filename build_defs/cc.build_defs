@@ -125,7 +125,11 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
       labels (list): Labels to attach to this rule.
     """
 
-    subinclude(CONFIG.CC.DEFAULT_COMPILER)
+    if(_c):
+       subinclude(CONFIG.CC.DEFAULT_C_COMPILER)
+    else:
+       subinclude(CONFIG.CC.DEFAULT_CPP_COMPILER)
+
     compiler = getCompiler()
     archiver = getArchiver()
 
@@ -318,7 +322,10 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
       labels (list): Labels to attach to this rule.
     """
 
-    subinclude(CONFIG.CC.DEFAULT_COMPILER)
+    if(_c):
+       subinclude(CONFIG.CC.DEFAULT_C_COMPILER)
+    else:
+       subinclude(CONFIG.CC.DEFAULT_CPP_COMPILER)
     linker = getLinker()
 
     provides = {"cc": ":" + name}
@@ -443,7 +450,10 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
       optional_outs (list): Name of optional outputs.
     """
 
-    subinclude(CONFIG.CC.DEFAULT_COMPILER)
+    if(_c):
+       subinclude(CONFIG.CC.DEFAULT_C_COMPILER)
+    else:
+       subinclude(CONFIG.CC.DEFAULT_CPP_COMPILER)
     linker = getLinker()
 
     # Compile any headers or sources into a library first.
