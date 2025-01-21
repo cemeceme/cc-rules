@@ -136,9 +136,6 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     compiler = getCompiler()
     archiver = getArchiver()
 
-    if alwayslink:
-        log.fatal("alwayslink not yet implemented.")
-
     # Handle defines being passed as a dict, as a nicety for the user.
     if isinstance(defines, dict):
         defines = [k if v is None else f'{k}=\\"{v}\\"' for k, v in sorted(defines.items())]
@@ -179,6 +176,9 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     if not out:
         out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
 
+    if alwayslink:
+        labels += ["cc:al:" + join_path(pkg_name,out)]
+        
     # Generate a rule for all sources, so that they can be expanded at build time and passed into the input of the archive rule.
     sourceRule = filegroup(
         name=tag(name,"srcs"),
@@ -257,6 +257,9 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
     """
 
     TURule = _generateTURule(name=name, src=src, out=out, hdrs=hdrs + private_hdrs, deps=deps, flags=compiler_flags)
+
+    if alwayslink:
+        labels += ["cc:al:" + join_path(package_name(),out)]
 
     # Separate file rule to package the object rule with passed in flags.
     fileRule = filegroup(
