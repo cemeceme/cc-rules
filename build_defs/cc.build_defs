@@ -79,8 +79,14 @@ def _getExpandSrcsPreBuild(name:str, srcs:list, hdrs:list, deps:list, flags:list
             # Make sure to use the canonical label, as otherwise rules are sometimes not found.
             label = canonicalise(label)
 
+            # Get and check that the given rule has outputs.
+            # If not, fail instad of trying to handle misformed inputs.
+            srcs = get_outs(label)
+            if(len(srcs) == 0):
+               log.fatal(label + " has no outputs")
+
             # Generate build rule for each source.
-            for src in get_outs(label):
+            for src in srcs:
                 # Format source into a single file label.
                 srcLabel = label + "+" + src
                 # Generate rule and add as dependency.
