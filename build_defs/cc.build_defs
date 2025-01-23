@@ -184,11 +184,12 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
 
     if alwayslink:
         labels += ["cc:al:" + join_path(pkg_name,out)]
-        
+
     # Generate a rule for all sources, so that they can be expanded at build time and passed into the input of the archive rule.
     sourceRule = filegroup(
         name=tag(name,"srcs"),
         srcs=srcRules,
+        deps=[filegroup(name=tag(name, "srcs_deps"), srcs=buildLabelSrcRules)], # Build a dependency filegroup for label sources, to make sure they get built before being used.
         pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags, labels=labels, compiler=compiler)
     )
 
