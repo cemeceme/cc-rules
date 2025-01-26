@@ -19,7 +19,7 @@ def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags
 
     suffix = src.replace('/', '_').replace('.', '_').replace(':', '_').replace('|', '_')
     if(not out):
-        out = suffix + ".o"
+        out = suffix + CONFIG.CC.OBJECT_EXTENSION
 
     ruleName = tag(name, suffix)
 
@@ -56,6 +56,11 @@ def _generateLinkRule(name:str, out:str, deps:list, flags:list, labels:list, sha
     Generates a link step using the given linker function.
     """
 
+    # # Set output name if not given.
+    # if not out:
+    #     out = f'{name}.so' if name.startswith('lib') else f'lib{name}.so'
+    #     out = name + CONFIG.CC.SHARED_LIB_EXTENSION if name.startswith('lib') else "lib" + name + CONFIG.CC.SHARED_LIB_EXTENSION
+        
     labels += ["cc:ld:" + flag for flag in flags]
 
     linkRule = linker(
@@ -180,7 +185,8 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
 
     # Define out name if not defined.
     if not out:
-        out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
+        # out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
+        out = name + CONFIG.CC.ARCHIVE_EXTENSION if name.startswith('lib') else "lib" + name + CONFIG.CC.ARCHIVE_EXTENSION
 
     if alwayslink:
         labels += ["cc:al:" + join_path(pkg_name,out)]
@@ -364,8 +370,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
 
     # Set output name if not given.
     if not out:
-        out = f'{name}.so' if name.startswith('lib') else f'lib{name}.so'
-
+        out = name + CONFIG.CC.SHARED_LIB_EXTENSION if name.startswith('lib') else "lib" + name + CONFIG.CC.SHARED_LIB_EXTENSION
 
     # Create actual link rule.
     linkRule = _generateLinkRule(name=tag(name, "bin") , out=out, deps=deps, flags=linker_flags, labels=labels, sharedLib=True, linker=linker)

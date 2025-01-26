@@ -12,15 +12,55 @@ Target = //plugins:gcc
 ConfigKey = DefaultCPPCompilerPlugin
 Inherit = false
 Optional = false
-;DefaultValue = ///gcc//build_defs:gpp
+Type = str
 Help = The default compiler provider to use for c++.
 
 [PluginConfig "default_c_compiler"]
 ConfigKey = DefaultCCompilerPlugin
 Inherit = false
 Optional = false
-;DefaultValue = ///gcc//build_defs:gcc
+Type = str
 Help = The default compiler provider to use for c.
+
+[PluginConfig "shared_lib_extension"]
+ConfigKey = sharedLibExtension
+Inherit = true
+Optional = true
+DefaultValue = .so
+Type = str
+Help = The extension to use for dynamic libraries.
+
+[PluginConfig "static_lib_extension"]
+ConfigKey = staticLibExtension
+Inherit = true
+Optional = true
+DefaultValue = .a
+Type = str
+Help = The extension to use for static libraries.
+
+[PluginConfig "object_extension"]
+ConfigKey = objectExtension
+Inherit = true
+Optional = true
+DefaultValue = .o
+Type = str
+Help = The extension to use for object files.
+
+[PluginConfig "archive_extension"]
+ConfigKey = archiveExtension
+Inherit = true
+Optional = true
+DefaultValue = .a
+Type = str
+Help = The extension to use for archive files.
+
+[PluginConfig "binary_extension"]
+ConfigKey = binaryExtension
+Inherit = true
+Optional = true
+DefaultValue = ""
+Type = str
+Help = The extension to use for binary files.
 
 ;[Plugin "cc"]
 ;DefaultCompilerPlugin = ///gcc//build_defs:gcc
