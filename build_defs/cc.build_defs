@@ -495,9 +495,14 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], out:str=None, private_hdrs:l
         )
         deps += [libRule]
 
+    # Make sure to handle empty extension strings, which get parsed as None objects by please.
+    extension = CONFIG.CC.BINARY_EXTENSION
+    if not extension:
+        extension = ""
+
     # Set output name if not given.
     if not out:
-        out = name if name.endswith(CONFIG.CC.BINARY_EXTENSION) else name + CONFIG.CC.BINARY_EXTENSION
+        out = name if name.endswith(extension) else name + extension
 
     linkRule = _generateLinkRule(name=tag(name, "bin"), out=out, deps=deps, flags=linker_flags, labels=labels, sharedLib=False, linker=linker)
 
