@@ -394,7 +394,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
     return(linkRule)
 
 
-def cc_module(name:str, srcs:list=[], hdrs:list=[], out:str=None, interfaces:list=[], private_hdrs:list=[],
+def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_hdrs:list=[],
               deps:list=[], visibility:list=None, test_only:bool&testonly=False,
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
               pkg_config_libs:list=[], pkg_config_cflags:list=[], includes:list=[],
@@ -409,7 +409,6 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], out:str=None, interfaces:lis
       srcs (list): C++ source files to compile.
       hdrs (list): Header files. These will be made available to dependent rules, so the distinction
                    between srcs and hdrs is important.
-      out (str): Name of the output binary. Defaults to the name + binary_extension if it doesn't already end in the extension.
       interfaces (list): Module interface files. Again, these are treated differently to `srcs` in
                          terms of compilation so the distinction is important.
       private_hdrs (list): Header files that are available only to this rule and not exported to
@@ -438,7 +437,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], out:str=None, interfaces:lis
     """
     log.fatal("cc_static_library not yet implemented.")
 
-def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
+def cc_binary(name:str, srcs:list=[], hdrs:list=[], out:str=None, private_hdrs:list=[],
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
               deps:list=[], visibility:list=None, pkg_config_libs:list=[], includes:list=[], defines:list|dict=[],
               pkg_config_cflags:list=[], test_only:bool&testonly=False, static:bool=False, _c=False,
@@ -449,6 +448,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[],
       name (str): Name of the rule
       srcs (list): C or C++ source files to compile.
       hdrs (list): Header files.
+      out (str): Name of the output binary. Defaults to the name + binary_extension if it doesn't already end in the extension.
       private_hdrs (list): Header files that are available only to this rule and not exported to
                            dependent rules.
       compiler_flags (list): Flags to pass to the compiler.
