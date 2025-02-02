@@ -1,6 +1,6 @@
 
 [please]
-version = >=17.12.7-depHandling
+version = >=17.12.7
 
 [PluginDefinition]
 name = cc

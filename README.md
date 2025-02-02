@@ -29,7 +29,8 @@ This way, new compilers with incompatible parameters should be able to be used w
 Switching from the official cc-rules is fairly simple, with two simple edits:
 - Replace the plugin definition.
 - Edit your `plzconfig` file.
-- Make sure you have a please version installed that is supported, as mentioned aove.
+
+Additionally, make sure you have a please version installed that is supported, as mentioned above.
 
 ### Replacing the plugin definition
 If you are using the `cc-rules` plugin, there should be a section in your plugins build file that looks like this:
