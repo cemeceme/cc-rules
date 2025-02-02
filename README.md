@@ -80,6 +80,6 @@ DefaultCPPCompilerPlugin = ///gcc//build_defs:gpp
 Target = //plugins:gcc
 ; list of cc-rule parameters
 ```
-Note that the cc-rule configuration parameters are now grouped under the gcc plugin, as it is individual compiler modules to handle compiler specific configurations. In this case, the gcc plugin now handles the cc rules that were defined previously.
+Note that the cc-rule configuration parameters are now grouped under the gcc plugin, as it is individual compiler modules that handle compiler specific configurations. In this case, the gcc plugin now handles the cc rules that were defined previously.
 
 And with that, you should now be able to build your project as usual!
