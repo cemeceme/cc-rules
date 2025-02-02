@@ -375,7 +375,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
     # Create actual link rule.
     linkRule = _generateLinkRule(name=tag(name, "bin") , out=out, deps=deps, flags=linker_flags, labels=labels, sharedLib=True, linker=linker)
 
-    # Add include labels after the link rule, so that the link rule doesnt try to use non-existent includes.
+    # Add include labels after the link rule, so that the link rule doesn't try to use non-existent includes.
     labels += ["cc:inc:" + package_name()]
     labels += ["cc:lib:" + join_path(get_base_path(), name)]
 
