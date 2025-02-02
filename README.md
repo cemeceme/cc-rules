@@ -2,7 +2,7 @@
 
 A set of please rules for compiling C and C++ code that are meant to be compatible with the official cc-rules.
 
-These rules are meant to be close enough to the official ones so that you can reference the documentation for the offical cc-rules. However, there may still be a lot of unimplemented features that the official rules provide.
+These rules are meant to be close enough to the official ones so that you can reference the documentation for the official cc-rules. However, there may still be a lot of unimplemented features that the official rules provide.
 
 Please note that this project has grown on an as-needed basis and as such may not support more uncommon aspects of C++ compilation. As projects that rely on these rules mature and use more niche C++ compilation features, so should this repository.
 

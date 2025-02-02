@@ -85,7 +85,7 @@ def _getExpandSrcsPreBuild(name:str, srcs:list, hdrs:list, deps:list, flags:list
             label = canonicalise(label)
 
             # Get and check that the given rule has outputs.
-            # If not, fail instad of trying to handle misformed inputs.
+            # If not, fail instead of trying to handle misformed inputs.
             srcs = get_outs(label)
             if(len(srcs) == 0):
                log.fatal(label + " has no outputs")
@@ -207,7 +207,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         archiver=archiver
     )
 
-    # seperaae archive filegroup to attach dependencies.
+    # separate archive filegroup to attach dependencies.
     archiveFilegroup = filegroup(
         name=tag(name,"as"),
         srcs=[archiveRule],
