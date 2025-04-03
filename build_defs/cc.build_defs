@@ -10,7 +10,7 @@ you can write a cc_library rule specifying e.g. linker_flags = ['-lz'] and not h
 that on every single cc_binary / cc_test that transitively depends on that library.
 """
 
-def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags:list, labels:list, compiler:function):
+def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags:list, labels:list, compiler:function, test_only:bool&testonly = False):
     """
     Generates a translation unit for the given source with the given compiler function.
     """
@@ -32,12 +32,13 @@ def _generateTURule(name:str, src:str, out:str=None, hdrs:list, deps:list, flags
         out=out,
         hdrs=hdrs,
         deps=deps,
-        labels=labels
+        labels=labels,
+        test_only=test_only
     )
 
     return(compileRule)
 
-def _generateArchiveRule(name: str, out:str, srcs:list, deps:list, archiver:function):
+def _generateArchiveRule(name: str, out:str, srcs:list, deps:list, archiver:function, test_only:bool&testonly = False):
     """
     Generates an archive step for archiving multiple object or archive files into one file.
     """
@@ -46,12 +47,13 @@ def _generateArchiveRule(name: str, out:str, srcs:list, deps:list, archiver:func
         name=name,
         out=out,
         srcs=srcs,
-        deps=deps
+        deps=deps,
+        test_only=test_only
     )
 
     return(archiveRule)
 
-def _generateLinkRule(name:str, out:str, deps:list, flags:list, labels:list, sharedLib:bool, linker:function):
+def _generateLinkRule(name:str, out:str, deps:list, flags:list, labels:list, sharedLib:bool, linker:function, test_only:bool&testonly = False):
     """
     Generates a link step using the given linker function.
     """
@@ -68,11 +70,12 @@ def _generateLinkRule(name:str, out:str, deps:list, flags:list, labels:list, sha
         out=out,
         deps=deps,
         sharedLib=sharedLib,
-        labels=labels
+        labels=labels,
+        test_only=test_only
     )
     return(linkRule)
 
-def _getExpandSrcsPreBuild(name:str, srcs:list, hdrs:list, deps:list, flags:list, labels:list, compiler:function):
+def _getExpandSrcsPreBuild(name:str, srcs:list, hdrs:list, deps:list, flags:list, labels:list, compiler:function, test_only:bool&testonly = False):
     def _ExpandSrcsPreBuild(callerName:str):
     """
     Expands build label sources in a pre build and adds them as the dependency to this rule.
@@ -95,7 +98,7 @@ def _getExpandSrcsPreBuild(name:str, srcs:list, hdrs:list, deps:list, flags:list
                 # Format source into a single file label.
                 srcLabel = label + "+" + src
                 # Generate rule and add as dependency.
-                srcRule = _generateTURule(name=name, src=srcLabel, hdrs=hdrs, deps=deps, flags=flags, labels=labels, compiler=compiler)
+                srcRule = _generateTURule(name=name, src=srcLabel, hdrs=hdrs, deps=deps, flags=flags, labels=labels, compiler=compiler, test_only=test_only)
                 add_dep(callerName, srcRule, True)
     return(_ExpandSrcsPreBuild)
 
@@ -169,13 +172,13 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         if(looks_like_build_label(src)):
             buildLabelSrcRules += [src]
         else:
-            srcRules += [_generateTURule(name=name, src=src, hdrs=hdrs + private_hdrs, deps=deps, flags=compiler_flags, labels=labels, compiler=compiler)]
+            srcRules += [_generateTURule(name=name, src=src, hdrs=hdrs + private_hdrs + textual_hdrs, deps=deps, flags=compiler_flags, labels=labels, compiler=compiler, test_only=test_only)]
 
 
     # Generate a rule for public headers and add them to the provided labels so that other rules can access them.
     headerRule = filegroup(
         name = tag(name, "hdrs"),
-        srcs=hdrs,
+        srcs=hdrs + textual_hdrs,
         deps=deps,
         test_only=test_only,
         labels=labels,
@@ -195,8 +198,9 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     sourceRule = filegroup(
         name=tag(name,"srcs"),
         srcs=srcRules,
+        test_only=test_only,
         deps=[filegroup(name=tag(name, "srcs_deps"), srcs=buildLabelSrcRules)], # Build a dependency filegroup for label sources, to make sure they get built before being used.
-        pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs+private_hdrs, deps=deps, flags=compiler_flags, labels=labels, compiler=compiler)
+        pre_build=_getExpandSrcsPreBuild(name=name, srcs=buildLabelSrcRules,hdrs=hdrs + private_hdrs + textual_hdrs, deps=deps, flags=compiler_flags, labels=labels, compiler=compiler, test_only=test_only)
     )
 
     archiveRule = _generateArchiveRule(
@@ -204,6 +208,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         out=out,
         srcs=[],
         deps=[sourceRule],
+        test_only=test_only,
         archiver=archiver
     )
 
@@ -211,6 +216,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     archiveFilegroup = filegroup(
         name=tag(name,"as"),
         srcs=[archiveRule],
+        test_only=test_only,
         deps=deps
     )
     
@@ -269,7 +275,7 @@ def cc_object(name:str, src:str, hdrs:list=[], private_hdrs:list=[], out:str=Non
       labels (list): Labels to attach to this rule.
     """
 
-    TURule = _generateTURule(name=name, src=src, out=out, hdrs=hdrs + private_hdrs, deps=deps, flags=compiler_flags)
+    TURule = _generateTURule(name=name, src=src, out=out, hdrs=hdrs + private_hdrs, deps=deps, flags=compiler_flags, test_only=test_only)
 
     if alwayslink:
         labels += ["cc:al:" + join_path(package_name(),out)]
@@ -373,7 +379,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
         out = name + CONFIG.CC.SHARED_LIB_EXTENSION if name.startswith('lib') else "lib" + name + CONFIG.CC.SHARED_LIB_EXTENSION
 
     # Create actual link rule.
-    linkRule = _generateLinkRule(name=tag(name, "bin") , out=out, deps=deps, flags=linker_flags, labels=labels, sharedLib=True, linker=linker)
+    linkRule = _generateLinkRule(name=tag(name, "bin") , out=out, deps=deps, flags=linker_flags, labels=labels, sharedLib=True, linker=linker, test_only=test_only)
 
     # Add include labels after the link rule, so that the link rule doesn't try to use non-existent includes.
     labels += ["cc:inc:" + package_name()]
@@ -504,7 +510,7 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], out:str=None, private_hdrs:l
     if not out:
         out = name if name.endswith(extension) else name + extension
 
-    linkRule = _generateLinkRule(name=tag(name, "bin"), out=out, deps=deps, flags=linker_flags, labels=labels, sharedLib=False, linker=linker)
+    linkRule = _generateLinkRule(name=tag(name, "bin"), out=out, deps=deps, flags=linker_flags, labels=labels, sharedLib=False, linker=linker, test_only=test_only)
 
     fileRule = filegroup(
         name=name,
