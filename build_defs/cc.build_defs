@@ -163,6 +163,15 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
               ["cc:def:" + define for define in defines] +
               labels)
 
+
+    # Define out name if not defined.
+    if not out:
+        # out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
+        out = name + CONFIG.CC.ARCHIVE_EXTENSION if name.startswith('lib') else "lib" + name + CONFIG.CC.ARCHIVE_EXTENSION
+
+    if alwayslink:
+        labels += ["cc:al:" + join_path(pkg_name,out)]
+
     # A set of rules for sources that are not build labels.
     srcRules = []
     # A set of sources that are build labels, and will need to be expanded in a pre-build step.
@@ -185,14 +194,6 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         requires = ["cc_hdrs", "cc_mod"],
         output_is_complete = False
     )
-
-    # Define out name if not defined.
-    if not out:
-        # out = f'{name}.a' if name.startswith('lib') else f'lib{name}.a'
-        out = name + CONFIG.CC.ARCHIVE_EXTENSION if name.startswith('lib') else "lib" + name + CONFIG.CC.ARCHIVE_EXTENSION
-
-    if alwayslink:
-        labels += ["cc:al:" + join_path(pkg_name,out)]
 
     # Generate a rule for all sources, so that they can be expanded at build time and passed into the input of the archive rule.
     sourceRule = filegroup(
@@ -441,7 +442,7 @@ def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_
       labels (list): Labels to attach to this rule.
       optional_outs (list): Name of optional outputs.
     """
-    log.fatal("cc_static_library not yet implemented.")
+    log.fatal("cc_module not yet implemented.")
 
 def cc_binary(name:str, srcs:list=[], hdrs:list=[], out:str=None, private_hdrs:list=[],
               compiler_flags:list&cflags&copts=[], linker_flags:list&ldflags&linkopts=[],
