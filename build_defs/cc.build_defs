@@ -84,17 +84,28 @@ def _getExpandSrcsPreBuild(name:str, srcs:list, hdrs:list, deps:list, flags:list
             if(not looks_like_build_label(label)):
                 log.fatal("Given source: '" + label + "' is a file. Must be a build label.")
 
+            # Partition out any named labels.
+            label, sep, named = label.partition("|")
+
             # Make sure to use the canonical label, as otherwise rules are sometimes not found.
             label = canonicalise(label)
 
-            # Get and check that the given rule has outputs.
+            # Get the requested sources.
+            foundSrcs = []
+            if(named):
+                # The given label was named, only get the outputs that match the name.
+                foundSrcs = get_named_outs(label)[named]
+            else:
+                # Get all outputs on the label
+                foundSrcs = get_outs(label)
+            
+            # Check if the rule has outputs.
             # If not, fail instead of trying to handle misformed inputs.
-            srcs = get_outs(label)
-            if(len(srcs) == 0):
-               log.fatal(label + " has no outputs")
+            if(len(foundSrcs) == 0):
+               log.fatal(label + sep + named + " has no outputs")
 
             # Generate build rule for each source.
-            for src in srcs:
+            for src in foundSrcs:
                 # Format source into a single file label.
                 srcLabel = label + "+" + src
                 # Generate rule and add as dependency.
