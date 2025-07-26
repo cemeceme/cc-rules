@@ -194,9 +194,15 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         else:
             srcRules += [_generateTURule(name=name, src=src, hdrs=hdrs + private_hdrs + textual_hdrs, deps=deps, flags=compiler_flags, labels=labels, compiler=compiler, test_only=test_only)]
 
+    # Generate a rule for all input sources and add them to the provided labels so that other rules can access them.
+    sourcesFilegroup = filegroup(
+        name=tag(name, "srcs"),
+        srcs=srcs,
+        test_only=test_only
+    )
 
     # Generate a rule for public headers and add them to the provided labels so that other rules can access them.
-    headerRule = filegroup(
+    headerFilegroup = filegroup(
         name = tag(name, "hdrs"),
         srcs=hdrs + textual_hdrs,
         deps=deps,
@@ -207,8 +213,8 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     )
 
     # Generate a rule for all sources, so that they can be expanded at build time and passed into the input of the archive rule.
-    sourceRule = filegroup(
-        name=tag(name,"srcs"),
+    objectsRule = filegroup(
+        name=tag(name,"os"),
         srcs=srcRules,
         test_only=test_only,
         deps=[filegroup(name=tag(name, "srcs_deps"), srcs=buildLabelSrcRules)], # Build a dependency filegroup for label sources, to make sure they get built before being used.
@@ -219,7 +225,7 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
         name=tag(name,"a"),
         out=out,
         srcs=[],
-        deps=[sourceRule],
+        deps=[objectsRule],
         test_only=test_only,
         archiver=archiver
     )
@@ -234,14 +240,15 @@ def cc_library(name:str, srcs:list=[], hdrs:list=[], private_hdrs:list=[], deps:
     
     provides = {
         "cc": archiveFilegroup,
-        "cc_hdrs": headerRule
+        "cc_srcs": sourcesFilegroup,
+        "cc_hdrs": headerFilegroup
     }
 
     # Generate a wrapper rule, to pass in arguments.
     libRule = filegroup(
         name=name,
         srcs=[archiveFilegroup],
-        deps=[headerRule]+deps,
+        deps=[headerFilegroup]+deps,
         provides=provides,
         labels=labels,
         test_only=test_only,
