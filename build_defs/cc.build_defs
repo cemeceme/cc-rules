@@ -416,7 +416,7 @@ def cc_shared_object(name:str, srcs:list=[], hdrs:list=[], out:str='', optional_
         labels=labels,
         output_is_complete=True
     )
-    return(linkRule)
+    return(fileRule)
 
 
 def cc_module(name:str, srcs:list=[], hdrs:list=[], interfaces:list=[], private_hdrs:list=[],
@@ -537,7 +537,8 @@ def cc_binary(name:str, srcs:list=[], hdrs:list=[], out:str=None, private_hdrs:l
         test_only=test_only,
         visibility=visibility,
         output_is_complete=True,
-        binary=True
+        binary=True,
+        labels=labels
     )
     return(fileRule)
 
